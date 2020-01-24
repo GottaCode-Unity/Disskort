@@ -1,0 +1,158 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Net;
+using System.Threading;
+
+namespace Disskort_Server
+{
+    public partial class DisskortServer : Form
+    {
+        const string version = "1.0";
+
+        string chat = "-First Message: ";
+
+        private static byte[] buffer = new byte[1024];
+
+        private static List<Socket> clientSockets = new List<Socket>();
+
+        private static Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+        public DisskortServer()
+        {
+            InitializeComponent();
+
+            DisskortServer.CheckForIllegalCrossThreadCalls = false;
+        }
+
+        private void tbPasswordKey(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                if (tbPassword.Text == "Lolbreaker1")
+                {
+                    gbLogin.Enabled = false;
+
+                    gbStatus.Enabled = true;
+
+                    Server();
+                }
+            }
+        }
+
+        private void Server()
+        {
+            try
+            {
+                lbStatus.Items.Clear();
+
+                lbStatus.Items.Add("Starting server...");
+
+                serverSocket.Bind(new IPEndPoint(IPAddress.Any, 80));
+
+                serverSocket.Listen(30);
+
+                serverSocket.BeginAccept(new AsyncCallback(AcceptCallback), null);
+
+                lbStatus.Items.Add("Server started!");
+                lbStatus.Items.Add("Listening on port 80...");
+                lbStatus.Items.Add("");
+
+                btnShutDown.Enabled = true;
+            }
+            catch (Exception)
+            {
+                lbStatus.Items.Add("Fatal Error!");
+            }
+        }
+
+        private void AcceptCallback(IAsyncResult AR)
+        {
+            Socket socket = serverSocket.EndAccept(AR);
+
+            clientSockets.Add(socket);
+
+            socket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(RecieveCallback), socket);
+
+            lbStatus.Items.Add("Client connected!");
+
+            serverSocket.BeginAccept(new AsyncCallback(AcceptCallback), null);
+        }
+
+        private void RecieveCallback(IAsyncResult AR)
+        {
+            try
+            {
+                Socket socket = (Socket)AR.AsyncState;
+
+                int recieved = socket.EndReceive(AR);
+
+                byte[] dataBuffer = new byte[recieved];
+
+                Array.Copy(buffer, dataBuffer, recieved);
+
+                string msg = Encoding.ASCII.GetString(dataBuffer);
+
+                if (msg == "get version")
+                {
+                    lbStatus.Items.Add($"Client requested version!");
+
+                    socket.Send(Encoding.ASCII.GetBytes(version), SocketFlags.None);
+                }
+                else if (msg == "update")
+                {
+                    lbStatus.Items.Add($"Client requested update!");
+
+                    socket.Send(Encoding.ASCII.GetBytes(chat));
+                }
+                else
+                {
+                    lbStatus.Items.Add($"Client sent message: {msg}");
+
+                    chat += msg + "|";
+
+                    socket.Send(Encoding.ASCII.GetBytes(chat));
+                }
+
+                socket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(RecieveCallback), socket);
+
+                serverSocket.BeginAccept(new AsyncCallback(AcceptCallback), null);
+            }
+            catch (Exception)
+            {
+                lbStatus.Items.Add("Client disconnected!");
+            }
+
+            if (Encoding.ASCII.GetBytes(chat).Length > 1000)
+            {
+                chat = "Chat was cleared by host!|";
+            }
+        }
+
+        private void btnShutDown_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("Turn off server? This will disconnect all clients!", "Disskort", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+            {
+                btnShutDown.Enabled = false;
+
+                Application.Exit();
+            }
+        }
+
+        private void DisskortServer_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (btnShutDown.Enabled)
+                if (MessageBox.Show("Turn off server? This will disconnect all clients!", "Disskort", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                {
+                    e.Cancel = true;
+                }
+        }
+    }
+}
