@@ -1,0 +1,246 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Net;
+using System.Net.Sockets;
+using SimpleTCP;
+using System.Threading;
+
+namespace Disskort
+{
+    public partial class DisskortWindow : Form
+    {
+        bool servershutdown = false;
+
+        const string myVersion = "1.0";
+
+        private static Socket clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+        public DisskortWindow()
+        {
+            InitializeComponent();
+
+            DisskortWindow.CheckForIllegalCrossThreadCalls = false;
+        }
+
+        private void tbName_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                tbAdminKey.Focus();
+            }
+        }
+
+        private void tbAdminKey_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                btnConnect.PerformClick();
+            }
+        }
+
+        private void tbCommand_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                btnSendCommand.PerformClick();
+            }
+        }
+
+        private void btnConnect_Click(object sender, EventArgs e)
+        {
+            if (tbName.Text.ToLower().Contains("admin") || tbName.Text.Length > 10 || tbName.Text.Length < 3 || tbName.Text.Contains("|") || tbName.Text.Contains(":"))
+            {
+                MessageBox.Show("Your name has to have a length between 3 and 10! Illegal letters: | :", "Disskort", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            else if (tbAdminKey.Text == "Lolbreaker1")
+            {
+                gbAdminLogin.Enabled = false;
+
+                gbAdminConsole.Enabled = true;
+
+                gbChat.Enabled = true;
+
+                timerChatUpdate.Enabled = true;
+
+                ActivateClient(true);
+            }
+            else
+            {
+                gbAdminLogin.Enabled = false;
+
+                gbChat.Enabled = true;
+
+                timerChatUpdate.Enabled = true;
+
+                ActivateClient(false);
+            }
+        }
+
+        private void tbMessage_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                btnSend.PerformClick();
+            }
+        }
+
+        void ActivateClient(bool admin)
+        {
+            do
+            {
+                try
+                {
+                    lbChat.Items.Clear();
+
+                    lbChat.Items.Add("Trying to connect to server...");
+
+                    lbChat.Update();
+
+                    clientSocket.Connect("40.114.30.164", 80);
+                }
+                catch (Exception)
+                {
+                    lbChat.Items.Add("Failed!");
+
+                    lbChat.Update();
+
+                    Thread.Sleep(1000);
+                }
+            } while (!clientSocket.Connected);
+
+            lbChat.Items.Add("Checking version...");
+
+            lbChat.Update();
+
+            clientSocket.Send(Encoding.ASCII.GetBytes("get version"));
+
+            byte[] recievedBuffer = new byte[1024];
+
+            int rec = clientSocket.Receive(recievedBuffer);
+
+            byte[] data = new byte[rec];
+
+            Array.Copy(recievedBuffer, data, rec);
+
+            if (Encoding.ASCII.GetString(data) == myVersion)
+            {
+                lbChat.Items.Add("Version verified!");
+
+                lbChat.Items.Add("");
+
+                lbChat.Items.Add("Connected!");
+
+                lbChat.Update();
+
+                Thread.Sleep(500);
+
+                lbChat.Items.Clear();
+            }
+            else
+            {
+                lbChat.Items.Add("Outdated version!");
+
+                MessageBox.Show("Your using an old version of Disskort! Please get the new version on http://disskortchat.wixsite.com/disskort/", "Disskort", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                Application.Exit();
+            }
+        }
+
+        private void timerChatUpdate_Tick(object sender, EventArgs e)
+        {
+            try
+            {
+                byte[] sendBuffer = Encoding.ASCII.GetBytes("update");
+
+                clientSocket.Send(sendBuffer);
+
+                byte[] recievedBuffer = new byte[1024];
+
+                int rec = clientSocket.Receive(recievedBuffer);
+
+                byte[] data = new byte[rec];
+
+                Array.Copy(recievedBuffer, data, rec);
+
+                UpdateChat(Encoding.ASCII.GetString(data));
+            }
+            catch (Exception)
+            {
+                if (!servershutdown)
+                {
+                    servershutdown = true;
+
+                    MessageBox.Show("Server was shut down!", "Disskort");
+
+                    Application.Exit();
+                }
+            }
+        }
+
+        private void btnSend_Click(object sender, EventArgs e)
+        {
+            if (tbMessage.Text != "" && !tbMessage.Text.Contains("|") && !tbMessage.Text.Contains(":"))
+            {
+                byte[] sendBuffer = Encoding.ASCII.GetBytes(tbName.Text + ": " + tbMessage.Text);
+
+                clientSocket.Send(sendBuffer);
+
+                byte[] recievedBuffer = new byte[1024];
+
+                int rec = clientSocket.Receive(recievedBuffer);
+
+                byte[] data = new byte[rec];
+
+                Array.Copy(recievedBuffer, data, rec);
+
+                UpdateChat(Encoding.ASCII.GetString(data));
+
+                tbMessage.Text = "";
+            }
+            else if (tbMessage.Text.Contains("|") || tbMessage.Text.Contains(":"))
+            {
+                MessageBox.Show("Illegal letters: | :", "Disskort", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void UpdateChat(string chat)
+        {
+            string[] chatToUpdate = chat.Split('|');
+
+            string[] currentChat = new string[lbChat.Items.Count];
+
+            int index = 0;
+
+            foreach (string item in lbChat.Items)
+            {
+                currentChat[index] = item;
+
+                index++;
+            }
+
+            if (chatToUpdate[0] == "Chat was cleared by host!")
+            {
+                lbChat.Items.Clear();
+            }
+
+            for (int i = 1; i < chatToUpdate.Length - 1; i++)
+            {
+                try
+                {
+                    string test = currentChat[i];
+                }
+                catch (Exception)
+                {
+                    lbChat.Items.Add(chatToUpdate[i]);
+                }
+            }
+        }
+    }
+}
