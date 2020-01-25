@@ -36,7 +36,7 @@ namespace Disskort_Server
         {
             if (e.KeyCode == Keys.Enter)
             {
-                if (tbPassword.Text == "Lolbreaker1")
+                if (tbPassword.Text == "passwordDisskort")
                 {
                     gbLogin.Enabled = false;
 
