@@ -59,7 +59,7 @@ namespace Disskort_Server
                 serverSocket.BeginAccept(AcceptCallback, null);
 
                 lbStatus.Items.Add("StartServer started!");
-                lbStatus.Items.Add($"Listening on port {PORT} ...");
+                lbStatus.Items.Add($"Listening on port {Settings.Default.PORT} ...");
                 lbStatus.Items.Add("");
 
                 btnShutDown.Enabled = true;
