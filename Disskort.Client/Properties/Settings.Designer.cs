@@ -34,7 +34,7 @@ namespace Disskort.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("192.168.1.107")]
+        [global::System.Configuration.DefaultSettingValueAttribute("40.114.30.164")]
         public string IP {
             get {
                 return ((string)(this["IP"]));
