@@ -59,7 +59,7 @@ namespace Disskort
             {
                 MessageBox.Show("Your name has to have a length between 3 and 10! Illegal letters: | :", "Disskort", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
-            else if (tbAdminKey.Text == "Lolbreaker1")
+            else if (tbAdminKey.Text == "passwordDisskort")
             {
                 gbAdminLogin.Enabled = false;
 
