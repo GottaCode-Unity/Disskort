@@ -1,0 +1,12 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Disskort.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="IP" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">40.114.30.164</Value>
+    </Setting>
+    <Setting Name="PORT" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">6666</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
