@@ -25,7 +25,16 @@ namespace Disskort.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("40.114.30.164")]
+        [global::System.Configuration.DefaultSettingValueAttribute("6666")]
+        public int Port {
+            get {
+                return ((int)(this["Port"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("192.168.1.107")]
         public string IP {
             get {
                 return ((string)(this["IP"]));
@@ -34,10 +43,19 @@ namespace Disskort.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("6666")]
-        public int PORT {
+        [global::System.Configuration.DefaultSettingValueAttribute("1.0")]
+        public string Version {
             get {
-                return ((int)(this["PORT"]));
+                return ((string)(this["Version"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool WithVersionCheck {
+            get {
+                return ((bool)(this["WithVersionCheck"]));
             }
         }
     }

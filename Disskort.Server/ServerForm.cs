@@ -10,8 +10,6 @@ namespace Disskort_Server
 {
     public partial class DisskortServer : Form
     {
-        private const string VERSION = "1.0";
-
         string chat = "-First Message: ";
 
         private static byte[] buffer = new byte[1024];
@@ -25,21 +23,27 @@ namespace Disskort_Server
             InitializeComponent();
 
             DisskortServer.CheckForIllegalCrossThreadCalls = false;
+
+            if (!Settings.Default.UseVerificationCode)
+            {
+                InitServer();
+            }
+        }
+
+        private void InitServer()
+        {
+            gbLogin.Enabled = false;
+            gbStatus.Enabled = true;
+            StartServer();
         }
 
         private void TbPasswordKeyPressed(object sender, KeyEventArgs e)
         {
-            StartServer();
-            return;
-
             if (e.KeyCode == Keys.Enter)
             {
                 if (tbPassword.Text == "passwordDisskort")
                 {
-                    gbLogin.Enabled = false;
-                    gbStatus.Enabled = true;
-
-                    StartServer();
+                    InitServer();
                 }
             }
         }
@@ -52,14 +56,14 @@ namespace Disskort_Server
 
                 lbStatus.Items.Add("Starting server...");
 
-                serverSocket.Bind(new IPEndPoint(IPAddress.Any, Settings.Default.PORT));
+                serverSocket.Bind(new IPEndPoint(IPAddress.Any, Settings.Default.Port));
 
                 serverSocket.Listen(30);
 
                 serverSocket.BeginAccept(AcceptCallback, null);
 
                 lbStatus.Items.Add("StartServer started!");
-                lbStatus.Items.Add($"Listening on port {Settings.Default.PORT} ...");
+                lbStatus.Items.Add($"Listening on port {Settings.Default.Port} ...");
                 lbStatus.Items.Add("");
 
                 btnShutDown.Enabled = true;
@@ -100,7 +104,7 @@ namespace Disskort_Server
                 if (msg == "get VERSION")
                 {
                     lbStatus.Items.Add($"Client requested VERSION!");
-                    socket.Send(Encoding.ASCII.GetBytes(VERSION), SocketFlags.None);
+                    socket.Send(Encoding.ASCII.GetBytes(Settings.Default.Version), SocketFlags.None);
                 }
                 else if (msg == "update")
                 {

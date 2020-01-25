@@ -1,15 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Net;
 using System.Net.Sockets;
-using SimpleTCP;
 using System.Threading;
 using Disskort.Properties;
 
@@ -17,9 +10,22 @@ namespace Disskort
 {
     public partial class DisskortWindow : Form
     {
-        bool servershutdown = false;
+        private static async Task<string> SendMessage(Socket socket, string message)
+        {
+            clientSocket.Send(Encoding.ASCII.GetBytes(message));
 
-        const string myVersion = "1.0";
+            await Task.Delay(100);
+
+            byte[] buffer = new byte[1024];
+            int rec = socket.Receive(buffer);
+            byte[] data = new byte[rec];
+
+            Array.Copy(buffer, data, rec);
+
+            return Encoding.ASCII.GetString(data);
+        }
+
+        bool servershutdown = false;
 
         private static Socket clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
@@ -54,7 +60,7 @@ namespace Disskort
             }
         }
 
-        private void btnConnect_Click(object sender, EventArgs e)
+        private async void btnConnect_Click(object sender, EventArgs e)
         {
             if (tbName.Text.ToLower().Contains("admin") || tbName.Text.Length > 10 || tbName.Text.Length < 3 || tbName.Text.Contains("|") || tbName.Text.Contains(":"))
             {
@@ -70,7 +76,7 @@ namespace Disskort
 
                 timerChatUpdate.Enabled = true;
 
-                ActivateClient(true);
+                await ActivateClient(true);
             }
             else
             {
@@ -80,7 +86,7 @@ namespace Disskort
 
                 timerChatUpdate.Enabled = true;
 
-                ActivateClient(false);
+                await ActivateClient(false);
             }
         }
 
@@ -92,7 +98,7 @@ namespace Disskort
             }
         }
 
-        void ActivateClient(bool admin)
+        async Task ActivateClient(bool admin)
         {
             do
             {
@@ -104,7 +110,7 @@ namespace Disskort
 
                     lbChat.Update();
 
-                    clientSocket.Connect(Settings.Default.IP, Settings.Default.PORT); // für lokalen test habe ich die ip durch IPAddress.Loopback verwendet;
+                    clientSocket.Connect(Settings.Default.IP, Settings.Default.Port); // für lokalen test habe ich die ip durch IPAddress.Loopback verwendet;
                 }
                 catch (Exception)
                 {
@@ -116,61 +122,43 @@ namespace Disskort
                 }
             } while (!clientSocket.Connected);
 
-            lbChat.Items.Add("Checking version...");
 
-            lbChat.Update();
-
-            clientSocket.Send(Encoding.ASCII.GetBytes("get version"));
-
-            byte[] recievedBuffer = new byte[1024];
-
-            int rec = clientSocket.Receive(recievedBuffer);
-
-            byte[] data = new byte[rec];
-
-            Array.Copy(recievedBuffer, data, rec);
-
-            if (Encoding.ASCII.GetString(data) == myVersion)
+            if (Settings.Default.WithVersionCheck)
             {
-                lbChat.Items.Add("Version verified!");
-
-                lbChat.Items.Add("");
-
-                lbChat.Items.Add("Connected!");
-
+                lbChat.Items.Add("Checking version...");
                 lbChat.Update();
 
-                Thread.Sleep(500);
+                string dataReceived = await SendMessage(clientSocket, "get version");
 
-                lbChat.Items.Clear();
+                if (dataReceived == Settings.Default.Version)
+                {
+                    lbChat.Items.Add("Version verified!");
+                    lbChat.Items.Add("");
+                }
+                else
+                {
+                    lbChat.Items.Add("Outdated version!");
+
+                    MessageBox.Show(
+                        "Your using an old version of Disskort! Please get the new version on http://disskortchat.wixsite.com/disskort/",
+                        "Disskort", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                    Application.Exit();
+                }
+
             }
-            else
-            {
-                lbChat.Items.Add("Outdated version!");
 
-                MessageBox.Show("Your using an old version of Disskort! Please get the new version on http://disskortchat.wixsite.com/disskort/", "Disskort", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-                Application.Exit();
-            }
+            lbChat.Items.Add("Connected!");
+            lbChat.Update();
+            Thread.Sleep(500);
+            lbChat.Items.Clear();
         }
 
-        private void timerChatUpdate_Tick(object sender, EventArgs e)
+        private async void timerChatUpdate_Tick(object sender, EventArgs e)
         {
             try
             {
-                byte[] sendBuffer = Encoding.ASCII.GetBytes("update");
-
-                clientSocket.Send(sendBuffer);
-
-                byte[] recievedBuffer = new byte[1024];
-
-                int rec = clientSocket.Receive(recievedBuffer);
-
-                byte[] data = new byte[rec];
-
-                Array.Copy(recievedBuffer, data, rec);
-
-                UpdateChat(Encoding.ASCII.GetString(data));
+                UpdateChat(await SendMessage(clientSocket, "update"));
             }
             catch (Exception)
             {
@@ -185,23 +173,11 @@ namespace Disskort
             }
         }
 
-        private void btnSend_Click(object sender, EventArgs e)
+        private async void btnSend_Click(object sender, EventArgs e)
         {
             if (tbMessage.Text != "" && !tbMessage.Text.Contains("|") && !tbMessage.Text.Contains(":"))
             {
-                byte[] sendBuffer = Encoding.ASCII.GetBytes(tbName.Text + ": " + tbMessage.Text);
-
-                clientSocket.Send(sendBuffer);
-
-                byte[] recievedBuffer = new byte[1024];
-
-                int rec = clientSocket.Receive(recievedBuffer);
-
-                byte[] data = new byte[rec];
-
-                Array.Copy(recievedBuffer, data, rec);
-
-                UpdateChat(Encoding.ASCII.GetString(data));
+                UpdateChat(await SendMessage(clientSocket, $"{tbName.Text}: {tbMessage.Text}"));
 
                 tbMessage.Text = "";
             }
